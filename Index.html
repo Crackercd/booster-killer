@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="theme-color" content="#0a0a0f"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="BoosterKiller"/>
+<meta name="description" content="Booster Killer — Ethical Hacking Course Tracker. Track your hacking journey across 8 phases with XP, streaks, timers and daily check-ins."/>
+<meta property="og:title" content="💀 BOOSTER KILLER"/>
+<meta property="og:description" content="Ethical Hacking Course Tracker — 8 Phases, XP System, Daily Check-ins"/>
+<meta property="og:type" content="website"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="💀 BOOSTER KILLER — Ethical Hacking Tracker"/>
+<title>💀 Booster Killer</title>
+<link rel="manifest" id="manifest-placeholder"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body,#root{height:100%;width:100%}
+  body{background:#0a0a0f;overflow-x:hidden}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:#0a0a0f}
+  ::-webkit-scrollbar-thumb{background:#00ff88;border-radius:2px}
+  input,textarea,select{outline:none;-webkit-appearance:none}
+  button{-webkit-tap-highlight-color:transparent}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  @keyframes xppop{0%{transform:scale(1)}50%{transform:scale(1.4)}100%{transform:scale(1)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes timerglow{from{box-shadow:0 0 10px rgba(0,255,136,0.2)}to{box-shadow:0 0 40px rgba(0,255,136,0.6)}}
+  @keyframes scanline{0%{top:-10%}100%{top:110%}}
+  .fade-in{animation:fadeIn 0.3s ease-out}
+  .timer-glow{animation:timerglow 1s infinite alternate}
+  .pulse{animation:pulse 2s infinite}
+  .xp-pop{animation:xppop 0.6s ease-out}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// PWA Manifest injection
+const manifest = {
+  name: "Booster Killer",
+  short_name: "BoosterKiller",
+  description: "Ethical Hacking Course Tracker",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#0a0a0f",
+  theme_color: "#00ff88",
+  orientation: "portrait-primary",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%230a0a0f'/%3E%3Ctext x='96' y='130' font-size='120' text-anchor='middle' fill='%2300ff88'%3E💀%3C/text%3E%3C/svg%3E", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230a0a0f'/%3E%3Ctext x='256' y='360' font-size='320' text-anchor='middle' fill='%2300ff88'%3E💀%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const url = URL.createObjectURL(blob);
+document.getElementById('manifest-placeholder').setAttribute('href', url);
+
+// Service Worker for offline support
+if ('serviceWorker' in navigator) {
+  const sw = `
+    const CACHE = 'booster-killer-v2';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll([self.location.href])).then(()=>self.skipWaiting()));
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(()=>r)));
+    });
+  `;
+  const swBlob = new Blob([sw], {type:'text/javascript'});
+  const swUrl = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl).catch(()=>{});
+}
+</script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const PHASES = [
+  { id:1, title:"Linux Terminal & Networking Basics", weeks:6, color:"#00ff88", icon:"🐧", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"1-1",title:"Navigation: pwd, ls, cd",type:"lab",xp:10},
+      {id:"1-2",title:"File operations: touch, mkdir, cp, mv, rm",type:"lab",xp:10},
+      {id:"1-3",title:"System info: whoami, id, uname, ifconfig",type:"lab",xp:10},
+      {id:"1-4",title:"Ports & processes: netstat, ps aux",type:"lab",xp:15},
+      {id:"1-5",title:"File permissions: chmod, sudo, ls -la",type:"theory",xp:15},
+      {id:"1-6",title:"Piping & redirection: |, >, grep",type:"lab",xp:15},
+      {id:"1-7",title:"Text editors: nano and vim",type:"lab",xp:10},
+      {id:"1-8",title:"Package manager: apt install/update",type:"lab",xp:10},
+      {id:"1-9",title:"IP, MAC addresses, IPv4/IPv6",type:"theory",xp:15},
+      {id:"1-10",title:"TCP vs UDP, common ports",type:"theory",xp:15},
+      {id:"1-11",title:"DNS, HTTP/HTTPS basics",type:"theory",xp:15},
+      {id:"1-12",title:"Wireshark — capture and analyze packets",type:"lab",xp:20},
+    ]},
+  { id:2, title:"Programming for Hackers", weeks:6, color:"#3b82f6", icon:"🐍", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"2-1",title:"Python: variables, data types, I/O",type:"theory",xp:10},
+      {id:"2-2",title:"Python: loops, conditionals",type:"lab",xp:15},
+      {id:"2-3",title:"Python: functions and modules",type:"lab",xp:15},
+      {id:"2-4",title:"Python: file handling",type:"lab",xp:15},
+      {id:"2-5",title:"Socket programming basics",type:"lab",xp:20},
+      {id:"2-6",title:"Build a simple port scanner",type:"lab",xp:25},
+      {id:"2-7",title:"HTTP requests with requests library",type:"lab",xp:20},
+      {id:"2-8",title:"String manipulation and regex",type:"lab",xp:20},
+      {id:"2-9",title:"Bash scripting basics",type:"lab",xp:20},
+      {id:"2-10",title:"Error handling — try/except",type:"theory",xp:10},
+    ]},
+  { id:3, title:"Reconnaissance", weeks:4, color:"#f59e0b", icon:"🔍", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"3-1",title:"Google Dorking — advanced search operators",type:"lab",xp:20},
+      {id:"3-2",title:"WHOIS lookup",type:"lab",xp:10},
+      {id:"3-3",title:"DNS enumeration: dig, nslookup",type:"lab",xp:15},
+      {id:"3-4",title:"Shodan basics",type:"theory",xp:15},
+      {id:"3-5",title:"theHarvester — email/subdomain recon",type:"lab",xp:20},
+      {id:"3-6",title:"Maltego — visual link analysis",type:"lab",xp:20},
+      {id:"3-7",title:"Recon-ng framework",type:"lab",xp:20},
+      {id:"3-8",title:"Gobuster — subdomain enumeration",type:"lab",xp:20},
+      {id:"3-9",title:"Passive vs active recon",type:"theory",xp:10},
+      {id:"3-10",title:"OSINT techniques",type:"theory",xp:15},
+    ]},
+  { id:4, title:"Scanning & Vulnerability Assessment", weeks:4, color:"#ef4444", icon:"💣", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"4-1",title:"Nmap basics — host discovery",type:"lab",xp:15},
+      {id:"4-2",title:"Nmap port scanning: -sS, -sT, -sU",type:"lab",xp:20},
+      {id:"4-3",title:"Nmap version detection: -sV",type:"lab",xp:15},
+      {id:"4-4",title:"Nmap OS detection: -O",type:"lab",xp:15},
+      {id:"4-5",title:"Nmap NSE scripts",type:"lab",xp:25},
+      {id:"4-6",title:"Nessus/OpenVAS scanning",type:"lab",xp:20},
+      {id:"4-7",title:"Nikto — web server scanner",type:"lab",xp:20},
+      {id:"4-8",title:"CVEs and CVSS scores",type:"theory",xp:15},
+      {id:"4-9",title:"Reading vulnerability reports",type:"theory",xp:15},
+      {id:"4-10",title:"Banner grabbing with Netcat",type:"lab",xp:15},
+    ]},
+  { id:5, title:"Exploitation Basics", weeks:6, color:"#8b5cf6", icon:"⚔️", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"5-1",title:"How exploits work",type:"theory",xp:15},
+      {id:"5-2",title:"Metasploit: msfconsole navigation",type:"lab",xp:20},
+      {id:"5-3",title:"Metasploit: search, use, show options",type:"lab",xp:20},
+      {id:"5-4",title:"Payloads: reverse shell vs bind shell",type:"lab",xp:25},
+      {id:"5-5",title:"Meterpreter basics",type:"lab",xp:25},
+      {id:"5-6",title:"Exploit-DB and Searchsploit",type:"lab",xp:20},
+      {id:"5-7",title:"Buffer overflow concept",type:"theory",xp:20},
+      {id:"5-8",title:"Hack Metasploitable 2",type:"lab",xp:50},
+      {id:"5-9",title:"TryHackMe: 5 beginner rooms",type:"lab",xp:50},
+      {id:"5-10",title:"VulnHub: 2 easy machines",type:"lab",xp:40},
+    ]},
+  { id:6, title:"Web Application Hacking", weeks:8, color:"#ec4899", icon:"🌐", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"6-1",title:"SQL Injection — manual and SQLmap",type:"lab",xp:30},
+      {id:"6-2",title:"XSS — reflected and stored",type:"lab",xp:25},
+      {id:"6-3",title:"Broken Authentication",type:"lab",xp:20},
+      {id:"6-4",title:"IDOR — Insecure Direct Object Reference",type:"lab",xp:25},
+      {id:"6-5",title:"Security Misconfiguration",type:"lab",xp:15},
+      {id:"6-6",title:"Command Injection",type:"lab",xp:25},
+      {id:"6-7",title:"File Upload Vulnerabilities",type:"lab",xp:25},
+      {id:"6-8",title:"SSRF — Server Side Request Forgery",type:"lab",xp:25},
+      {id:"6-9",title:"XXE — XML External Entity",type:"lab",xp:25},
+      {id:"6-10",title:"Burp Suite: Proxy, Repeater, Intruder",type:"lab",xp:30},
+      {id:"6-11",title:"PortSwigger Web Academy labs",type:"lab",xp:50},
+      {id:"6-12",title:"DVWA — full walkthrough",type:"lab",xp:40},
+    ]},
+  { id:7, title:"Password Attacks & Privilege Escalation", weeks:4, color:"#06b6d4", icon:"🔐", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"7-1",title:"Hashing: MD5, SHA1, SHA256, bcrypt",type:"theory",xp:15},
+      {id:"7-2",title:"John the Ripper",type:"lab",xp:20},
+      {id:"7-3",title:"Hashcat with rockyou.txt",type:"lab",xp:25},
+      {id:"7-4",title:"Hydra — online brute force",type:"lab",xp:25},
+      {id:"7-5",title:"Linux privesc: SUID binaries",type:"lab",xp:25},
+      {id:"7-6",title:"Linux privesc: writable cron jobs",type:"lab",xp:25},
+      {id:"7-7",title:"Linux privesc: sudo -l misconfigs",type:"lab",xp:25},
+      {id:"7-8",title:"Windows privesc techniques",type:"theory",xp:20},
+      {id:"7-9",title:"GTFOBins",type:"lab",xp:20},
+      {id:"7-10",title:"PayloadsAllTheThings reference",type:"theory",xp:10},
+    ]},
+  { id:8, title:"Post Exploitation & Reporting", weeks:4, color:"#84cc16", icon:"🕵️", theory:30, lab:60, notes:15,
+    topics:[
+      {id:"8-1",title:"Persistence — backdoors and cron",type:"lab",xp:25},
+      {id:"8-2",title:"Lateral movement and pivoting",type:"theory",xp:20},
+      {id:"8-3",title:"Data exfiltration",type:"lab",xp:20},
+      {id:"8-4",title:"Covering tracks — clearing logs",type:"lab",xp:20},
+      {id:"8-5",title:"Pentest report structure",type:"theory",xp:15},
+      {id:"8-6",title:"Executive summary writing",type:"theory",xp:20},
+      {id:"8-7",title:"Technical findings documentation",type:"theory",xp:20},
+      {id:"8-8",title:"CVSS scoring",type:"theory",xp:15},
+      {id:"8-9",title:"Evidence and PoC documentation",type:"lab",xp:20},
+      {id:"8-10",title:"Full VulnHub machine writeup",type:"lab",xp:50},
+    ]},
+];
+
+const TOTAL_XP = PHASES.flatMap(p=>p.topics).reduce((s,t)=>s+t.xp,0);
+const TOTAL_TOPICS = PHASES.flatMap(p=>p.topics).length;
+const SK = "booster_killer_v1";
+
+function loadState() {
+  try { const r=localStorage.getItem(SK); return r?JSON.parse(r):null; } catch{return null;}
+}
+function saveState(d) { try{localStorage.setItem(SK,JSON.stringify(d));}catch{} }
+function defaultState() {
+  return { studentName:"", startDate:new Date().toISOString().split("T")[0], completed:{}, attendance:{}, dailyLogs:{} };
+}
+
+const MOOD = ["😴","😟","😐","🙂","🔥"];
+const today = new Date().toISOString().split("T")[0];
+
+function App() {
+  const [state, setState] = useState(()=>loadState()||defaultState());
+  const [view, setView] = useState("dashboard");
+  const [selPhase, setSelPhase] = useState(1);
+  const [showCheckin, setShowCheckin] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [todayLog, setTodayLog] = useState({theory:0,lab:0,notes:0,entry:"",mood:3});
+  const [timer, setTimer] = useState({running:false,seconds:0,type:"lab"});
+  const [xpAnim, setXpAnim] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const timerRef = useRef(null);
+  const isMobile = window.innerWidth < 768;
+
+  useEffect(()=>{ saveState(state); },[state]);
+
+  useEffect(()=>{
+    window.addEventListener('beforeinstallprompt', e=>{
+      e.preventDefault(); setDeferredPrompt(e); setShowInstall(true);
+    });
+  },[]);
+
+  useEffect(()=>{
+    if(timer.running){
+      timerRef.current=setInterval(()=>setTimer(t=>({...t,seconds:t.seconds+1})),1000);
+    } else { clearInterval(timerRef.current); }
+    return ()=>clearInterval(timerRef.current);
+  },[timer.running]);
+
+  const totalXP = Object.keys(state.completed).reduce((s,id)=>{
+    const t=PHASES.flatMap(p=>p.topics).find(t=>t.id===id);
+    return s+(t?t.xp:0);
+  },0);
+  const completedCount = Object.keys(state.completed).length;
+  const overallPct = Math.round((completedCount/TOTAL_TOPICS)*100);
+  const level = Math.floor(totalXP/100)+1;
+  const levelXP = totalXP%100;
+  const attendanceDays = Object.keys(state.attendance).length;
+
+  const streak = (()=>{
+    let s=0, d=new Date();
+    while(true){
+      const k=d.toISOString().split("T")[0];
+      if(state.attendance[k]){s++;d.setDate(d.getDate()-1);}else break;
+    }
+    return s;
+  })();
+
+  const totalTheory = Object.values(state.attendance).reduce((s,a)=>s+(a.theory||0),0);
+  const totalLab = Object.values(state.attendance).reduce((s,a)=>s+(a.lab||0),0);
+  const totalNotes = Object.values(state.attendance).reduce((s,a)=>s+(a.notes||0),0);
+
+  function toggleTopic(id){
+    setState(prev=>{
+      const completed={...prev.completed};
+      if(completed[id]) delete completed[id];
+      else { completed[id]=true; setXpAnim(true); setTimeout(()=>setXpAnim(false),800); }
+      return {...prev,completed};
+    });
+  }
+
+  function checkin(){
+    setState(prev=>({
+      ...prev,
+      attendance:{...prev.attendance,[today]:{theory:todayLog.theory,lab:todayLog.lab,notes:todayLog.notes,mood:todayLog.mood,entry:todayLog.entry,ts:new Date().toISOString()}},
+      dailyLogs:{...prev.dailyLogs,[today]:todayLog.entry}
+    }));
+    setShowCheckin(false);
+  }
+
+  function fmtTime(s){
+    const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;
+    return h>0?`${h}:${String(m).padStart(2,"0")}:${String(sc).padStart(2,"0")}`:
+               `${String(m).padStart(2,"0")}:${String(sc).padStart(2,"0")}`;
+  }
+
+  function stopTimer(){
+    const mins=Math.round(timer.seconds/60);
+    setTodayLog(prev=>({...prev,[timer.type]:(prev[timer.type]||0)+mins}));
+    setTimer({running:false,seconds:0,type:timer.type});
+    setShowCheckin(true);
+  }
+
+  function phasePct(phase){ return Math.round((phase.topics.filter(t=>state.completed[t.id]).length/phase.topics.length)*100); }
+
+  async function installApp(){
+    if(deferredPrompt){ await deferredPrompt.prompt(); setDeferredPrompt(null); setShowInstall(false); }
+  }
+
+  const navItems = [
+    {id:"dashboard",label:"DASH",icon:"⌂"},
+    {id:"phases",label:"PHASES",icon:"◈"},
+    {id:"attendance",label:"ATTEND",icon:"◉"},
+    {id:"timer",label:"TIMER",icon:"⏱"},
+    {id:"logs",label:"LOGS",icon:"▤"},
+  ];
+
+  const s = { // styles shorthand
+    card: { background:"#0d1117", border:"1px solid #1e2a1e", borderRadius:8, padding:16 },
+    label: { fontSize:10, letterSpacing:2, color:"#4a5568" },
+    orb: (sz,col) => ({ fontFamily:"Orbitron,monospace", fontSize:sz, color:col, fontWeight:900 }),
+    btn: (col,bg) => ({ border:`1px solid ${col}`, color:col, background:bg||"transparent", borderRadius:4, padding:"8px 14px", fontFamily:"Orbitron,monospace", fontSize:11, letterSpacing:1, cursor:"pointer", transition:"all 0.15s" }),
+    bar: (pct,col) => <div style={{background:"#1a1a2e",borderRadius:3,height:6,overflow:"hidden"}}><div style={{width:`${pct}%`,height:"100%",background:col,transition:"width 0.6s",borderRadius:3}}/></div>,
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#0a0a0f",fontFamily:"'Space Mono',monospace",color:"#e2e8f0",display:"flex",flexDirection:"column"}}>
+
+      {/* XP Toast */}
+      {xpAnim && <div className="xp-pop" style={{position:"fixed",top:70,right:16,background:"#00ff88",color:"#0a0a0f",padding:"8px 18px",borderRadius:4,fontFamily:"Orbitron,monospace",fontWeight:900,fontSize:13,zIndex:300,boxShadow:"0 0 20px #00ff88"}}>⚡ +XP!</div>}
+
+      {/* Install Banner */}
+      {showInstall && <div style={{background:"#0d1117",borderBottom:"1px solid #00ff8844",padding:"10px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:12}}>
+        <span style={{color:"#a0aec0"}}>💾 Install <span style={{color:"#00ff88",fontFamily:"Orbitron,monospace"}}>BOOSTER KILLER</span> as an app</span>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={installApp} style={{...s.btn("#00ff88","rgba(0,255,136,0.15)"),fontSize:11}}>INSTALL</button>
+          <button onClick={()=>setShowInstall(false)} style={{...s.btn("#4a5568"),fontSize:11}}>✕</button>
+        </div>
+      </div>}
+
+      {/* Header */}
+      <div style={{background:"#0d0d17",borderBottom:"1px solid #1a2a1a",padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50}}>
+        <div>
+          <div style={{fontFamily:"Orbitron,monospace",fontSize:isMobile?14:18,fontWeight:900,color:"#00ff88",letterSpacing:2}}>💀 BOOSTER_KILLER</div>
+          <div style={{fontSize:9,color:"#2d4a2d",letterSpacing:1}}>v1.0 // ETHICAL HACKING TRACKER</div>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {!isMobile && navItems.map(n=>(
+            <button key={n.id} onClick={()=>setView(n.id)} style={{...s.btn(view===n.id?"#00ff88":"#2d4a2d",view===n.id?"rgba(0,255,136,0.08)":"transparent"),fontSize:10}}>
+              {n.icon} {n.label}
+            </button>
+          ))}
+          <button onClick={()=>setShowCheckin(true)} style={{...s.btn("#0a0a0f","#00ff88"),fontWeight:700}}>+ IN</button>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div style={{flex:1,padding:isMobile?"12px":"20px",maxWidth:1100,margin:"0 auto",width:"100%",paddingBottom:isMobile?80:20}}>
+
+        {/* DASHBOARD */}
+        {view==="dashboard" && (
+          <div className="fade-in">
+            {!state.studentName && (
+              <div style={{...s.card,borderColor:"#00ff8844",marginBottom:16}}>
+                <div style={{...s.orb(13,"#00ff88"),marginBottom:10}}>INITIALIZE BOOSTER KILLER PROFILE</div>
+                <div style={{display:"flex",gap:8}}>
+                  <input value={nameInput} onChange={e=>setNameInput(e.target.value)}
+                    onKeyDown={e=>e.key==="Enter"&&nameInput&&setState(prev=>({...prev,studentName:nameInput}))}
+                    placeholder="Your hacker name..." style={{flex:1,background:"#0a0a0f",border:"1px solid #1e3a1e",color:"#00ff88",padding:"10px 14px",borderRadius:4,fontFamily:"Orbitron,monospace",fontSize:14}}/>
+                  <button onClick={()=>nameInput&&setState(prev=>({...prev,studentName:nameInput}))} style={{...s.btn("#0a0a0f","#00ff88"),fontWeight:700}}>ENTER</button>
+                </div>
+              </div>
+            )}
+            {state.studentName && <div style={{marginBottom:16,fontSize:12,color:"#4a5568"}}>Welcome back, <span style={{color:"#00ff88",fontFamily:"Orbitron,monospace"}}>{state.studentName}</span> 🎯</div>}
+
+            {/* Stats grid */}
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:16}}>
+              {[
+                {label:"PROGRESS",value:`${overallPct}%`,sub:`${completedCount}/${TOTAL_TOPICS} topics`,color:"#00ff88"},
+                {label:"LEVEL",value:`LVL ${level}`,sub:`${levelXP}/100 XP`,color:"#3b82f6"},
+                {label:"STREAK",value:`${streak}🔥`,sub:`${attendanceDays} days total`,color:"#f59e0b"},
+                {label:"TOTAL XP",value:totalXP,sub:`of ${TOTAL_XP} max`,color:"#8b5cf6"},
+              ].map(st=>(
+                <div key={st.label} style={{...s.card,borderColor:st.color+"22"}}>
+                  <div style={{...s.label,marginBottom:6}}>{st.label}</div>
+                  <div style={{...s.orb(isMobile?20:26,st.color)}}>{st.value}</div>
+                  <div style={{fontSize:10,color:"#2d4a2d",marginTop:4}}>{st.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Progress bar */}
+            <div style={{...s.card,marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                <span style={s.label}>COURSE COMPLETION</span>
+                <span style={{fontSize:11,color:"#00ff88",fontFamily:"Orbitron,monospace"}}>{overallPct}%</span>
+              </div>
+              {s.bar(overallPct,"linear-gradient(90deg,#00ff88,#3b82f6)")}
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:8}}>
+                {PHASES.map(p=><span key={p.id} style={{fontSize:isMobile?12:14,opacity:phasePct(p)>0?1:0.3}}>{p.icon}</span>)}
+              </div>
+            </div>
+
+            {/* Time stats */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+              {[
+                {label:"THEORY",val:totalTheory,color:"#3b82f6",icon:"📚"},
+                {label:"LAB",val:totalLab,color:"#00ff88",icon:"⚡"},
+                {label:"NOTES",val:totalNotes,color:"#f59e0b",icon:"✏️"},
+              ].map(st=>(
+                <div key={st.label} style={{...s.card,textAlign:"center",borderColor:st.color+"22"}}>
+                  <div style={{fontSize:20,marginBottom:4}}>{st.icon}</div>
+                  <div style={{...s.orb(isMobile?14:18,st.color)}}>{Math.floor(st.val/60)}h {st.val%60}m</div>
+                  <div style={{...s.label,marginTop:4}}>{st.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Phase cards */}
+            <div style={s.label}>PHASES</div>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10,marginTop:10}}>
+              {PHASES.map(phase=>{
+                const pct=phasePct(phase);
+                const done=phase.topics.filter(t=>state.completed[t.id]).length;
+                return (
+                  <div key={phase.id} onClick={()=>{setSelPhase(phase.id);setView("phases");}}
+                    style={{...s.card,borderColor:pct===100?phase.color:"#1e2a1e",cursor:"pointer",transition:"all 0.2s"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                      <span style={{fontSize:20}}>{phase.icon}</span>
+                      <span style={{...s.orb(11,pct>0?phase.color:"#2d4a2d")}}>{pct}%</span>
+                    </div>
+                    <div style={{fontSize:10,color:pct>0?phase.color:"#4a5568",fontWeight:700,marginBottom:4}}>Ph.{phase.id}</div>
+                    <div style={{fontSize:9,color:"#4a5568",marginBottom:8,lineHeight:1.4}}>{phase.title}</div>
+                    {s.bar(pct,phase.color)}
+                    <div style={{fontSize:9,color:"#2d4a2d",marginTop:6}}>{done}/{phase.topics.length}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Recent logs */}
+            {Object.keys(state.dailyLogs).length>0 && (
+              <div style={{marginTop:16}}>
+                <div style={s.label}>RECENT ACTIVITY</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:10}}>
+                  {Object.entries(state.dailyLogs).slice(-3).reverse().map(([date,log])=>(
+                    <div key={date} style={{...s.card,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                      <span style={{...s.orb(11,"#00ff88"),minWidth:90}}>{date}</span>
+                      <span style={{fontSize:11,color:"#a0aec0",flex:1}}>{log||"No entry"}</span>
+                      {state.attendance[date] && (
+                        <div style={{display:"flex",gap:10,fontSize:10,color:"#4a5568"}}>
+                          <span>📚{state.attendance[date].theory}m</span>
+                          <span>⚡{state.attendance[date].lab}m</span>
+                          <span>{MOOD[(state.attendance[date].mood||3)-1]}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PHASES VIEW */}
+        {view==="phases" && (
+          <div className="fade-in">
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+              {PHASES.map(p=>(
+                <button key={p.id} onClick={()=>setSelPhase(p.id)}
+                  style={{...s.btn(selPhase===p.id?p.color:"#2d4a2d",selPhase===p.id?p.color+"11":"transparent"),padding:"6px 12px"}}>
+                  {p.icon} {isMobile?`P${p.id}`:p.id}
+                </button>
+              ))}
+            </div>
+            {PHASES.filter(p=>p.id===selPhase).map(phase=>{
+              const pct=phasePct(phase);
+              const done=phase.topics.filter(t=>state.completed[t.id]).length;
+              const phXP=phase.topics.reduce((s,t)=>s+(state.completed[t.id]?t.xp:0),0);
+              const maxXP=phase.topics.reduce((s,t)=>s+t.xp,0);
+              return (
+                <div key={phase.id}>
+                  <div style={{...s.card,borderColor:phase.color+"44",marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{fontSize:32}}>{phase.icon}</span>
+                        <div>
+                          <div style={{...s.orb(16,phase.color)}}>Phase {phase.id}</div>
+                          <div style={{fontSize:12,color:"#a0aec0",marginTop:2}}>{phase.title}</div>
+                          <div style={{display:"flex",gap:12,fontSize:10,color:"#4a5568",marginTop:6,flexWrap:"wrap"}}>
+                            <span>⏱{phase.weeks}wk</span><span>📚{phase.theory}m/day</span><span>⚡{phase.lab}m/day</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{...s.orb(30,phase.color)}}>{pct}%</div>
+                        <div style={{fontSize:10,color:"#4a5568"}}>{done}/{phase.topics.length} • {phXP}/{maxXP}XP</div>
+                      </div>
+                    </div>
+                    <div style={{marginTop:12}}>{s.bar(pct,phase.color)}</div>
+                  </div>
+
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {phase.topics.map((topic)=>{
+                      const isDone=state.completed[topic.id];
+                      return (
+                        <div key={topic.id} onClick={()=>toggleTopic(topic.id)}
+                          style={{background:isDone?phase.color+"0a":"#0d1117",border:`1px solid ${isDone?phase.color+"44":"#1e2a1e"}`,borderRadius:6,padding:"12px 14px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",transition:"all 0.2s"}}>
+                          <div style={{width:20,height:20,borderRadius:3,border:`2px solid ${isDone?phase.color:"#1e3a1e"}`,background:isDone?phase.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#0a0a0f",fontWeight:900,flexShrink:0}}>
+                            {isDone?"✓":""}
+                          </div>
+                          <div style={{flex:1,fontSize:isMobile?11:13,color:isDone?"#6b7280":"#e2e8f0",textDecoration:isDone?"line-through":"none"}}>{topic.title}</div>
+                          <span style={{fontSize:9,padding:"2px 7px",borderRadius:2,background:topic.type==="lab"?"rgba(0,255,136,0.1)":"rgba(59,130,246,0.1)",color:topic.type==="lab"?"#00ff88":"#3b82f6",border:`1px solid ${topic.type==="lab"?"#00ff8833":"#3b82f633"}`,whiteSpace:"nowrap"}}>{topic.type.toUpperCase()}</span>
+                          <span style={{...s.orb(11,isDone?phase.color:"#2d4a2d"),minWidth:32,textAlign:"right"}}>+{topic.xp}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ATTENDANCE VIEW */}
+        {view==="attendance" && (
+          <div className="fade-in">
+            <div style={{...s.orb(16,"#00ff88"),marginBottom:16}}>ATTENDANCE SYSTEM</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+              {[
+                {label:"TOTAL DAYS",value:attendanceDays,color:"#00ff88"},
+                {label:"STREAK",value:`${streak}🔥`,color:"#f59e0b"},
+                {label:"RATE",value:(()=>{
+                  if(!state.startDate) return "0%";
+                  const days=Math.max(1,Math.floor((new Date()-new Date(state.startDate))/86400000)+1);
+                  return Math.round((attendanceDays/days)*100)+"%";
+                })(),color:"#3b82f6"},
+              ].map(st=>(
+                <div key={st.label} style={{...s.card,textAlign:"center",borderColor:st.color+"33"}}>
+                  <div style={{...s.orb(isMobile?20:28,st.color)}}>{st.value}</div>
+                  <div style={{...s.label,marginTop:6}}>{st.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Heatmap */}
+            <div style={{...s.card,marginBottom:16}}>
+              <div style={{...s.label,marginBottom:12}}>ACTIVITY — LAST 10 WEEKS</div>
+              <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                {Array.from({length:70},(_,i)=>{
+                  const d=new Date(); d.setDate(d.getDate()-(69-i));
+                  const k=d.toISOString().split("T")[0];
+                  const att=state.attendance[k];
+                  const intensity=att?Math.min(1,(att.theory+att.lab+att.notes)/105):0;
+                  return <div key={k} title={k} style={{width:isMobile?12:16,height:isMobile?12:16,borderRadius:2,background:att?`rgba(0,255,136,${0.15+intensity*0.85})`:"#1a1a2e",border:k===today?"1px solid #00ff88":"1px solid transparent"}}/>;
+                })}
+              </div>
+            </div>
+
+            {/* Time targets */}
+            <div style={{...s.card,marginBottom:16}}>
+              <div style={{...s.label,marginBottom:12}}>DAILY AVG vs TARGET</div>
+              {[
+                {label:"📚 Theory",target:30,actual:Math.round(totalTheory/Math.max(1,attendanceDays)),color:"#3b82f6"},
+                {label:"⚡ Lab",target:60,actual:Math.round(totalLab/Math.max(1,attendanceDays)),color:"#00ff88"},
+                {label:"✏️ Notes",target:15,actual:Math.round(totalNotes/Math.max(1,attendanceDays)),color:"#f59e0b"},
+              ].map(st=>(
+                <div key={st.label} style={{marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                    <span style={{fontSize:12,color:st.color}}>{st.label}</span>
+                    <span style={{fontSize:11,color:"#4a5568"}}>{st.actual}/{st.target} min avg</span>
+                  </div>
+                  {s.bar(Math.min(100,(st.actual/st.target)*100),st.color)}
+                </div>
+              ))}
+            </div>
+
+            {/* Log list */}
+            <div style={s.label}>SESSION LOG</div>
+            <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:10}}>
+              {Object.entries(state.attendance).length===0
+                ?<div style={{...s.card,textAlign:"center",color:"#2d4a2d",padding:40}}>No sessions yet. Hit CHECK-IN to start!</div>
+                :Object.entries(state.attendance).reverse().map(([date,att])=>(
+                  <div key={date} style={{...s.card,flexWrap:"wrap",gap:8}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                      <span style={{...s.orb(12,"#00ff88")}}>{date}</span>
+                      <span style={{fontSize:18}}>{MOOD[(att.mood||3)-1]}</span>
+                    </div>
+                    <div style={{display:"flex",gap:16,fontSize:11,marginTop:8,flexWrap:"wrap"}}>
+                      <span style={{color:"#3b82f6"}}>📚{att.theory}m</span>
+                      <span style={{color:"#00ff88"}}>⚡{att.lab}m</span>
+                      <span style={{color:"#f59e0b"}}>✏️{att.notes}m</span>
+                      <span style={{color:"#4a5568"}}>Total:{att.theory+att.lab+att.notes}m</span>
+                    </div>
+                    {att.entry&&<div style={{fontSize:11,color:"#6b7280",marginTop:6,borderTop:"1px solid #1e2a1e",paddingTop:6}}>{att.entry}</div>}
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        )}
+
+        {/* TIMER VIEW */}
+        {view==="timer" && (
+          <div className="fade-in" style={{maxWidth:500,margin:"0 auto"}}>
+            <div style={{...s.orb(16,"#00ff88"),marginBottom:20,textAlign:"center"}}>STUDY TIMER</div>
+            <div className={timer.running?"timer-glow":""} style={{...s.card,borderColor:timer.running?"#00ff88":"#1e2a1e",textAlign:"center",padding:32,marginBottom:16}}>
+              <div style={{...s.orb(isMobile?52:72,timer.running?"#00ff88":"#4a5568"),letterSpacing:4,marginBottom:8}}>{fmtTime(timer.seconds)}</div>
+              <div style={{...s.label}}>{timer.running?`▶ TRACKING: ${timer.type.toUpperCase()}`:"READY"}</div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+              {[
+                {id:"theory",label:"📚 THEORY",target:"30m/day",color:"#3b82f6"},
+                {id:"lab",label:"⚡ LAB",target:"60m/day",color:"#00ff88"},
+                {id:"notes",label:"✏️ NOTES",target:"15m/day",color:"#f59e0b"},
+              ].map(t=>(
+                <button key={t.id} disabled={timer.running} onClick={()=>setTimer(prev=>({...prev,type:t.id}))}
+                  style={{...s.btn(timer.type===t.id?t.color:"#2d4a2d",timer.type===t.id?t.color+"11":"transparent"),padding:14,opacity:timer.running?0.5:1}}>
+                  <div style={{fontWeight:700}}>{t.label}</div>
+                  <div style={{fontSize:9,opacity:0.7,marginTop:4}}>{t.target}</div>
+                </button>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:10,marginBottom:16}}>
+              {!timer.running
+                ?<button onClick={()=>setTimer(t=>({...t,running:true}))} style={{flex:1,padding:16,background:"#00ff88",color:"#0a0a0f",border:"none",borderRadius:6,fontFamily:"Orbitron,monospace",fontSize:16,fontWeight:900,cursor:"pointer"}}>▶ START</button>
+                :<>
+                  <button onClick={()=>setTimer(t=>({...t,running:false}))} style={{flex:1,padding:14,background:"#f59e0b",color:"#0a0a0f",border:"none",borderRadius:6,fontFamily:"Orbitron,monospace",fontSize:14,fontWeight:900,cursor:"pointer"}}>⏸ PAUSE</button>
+                  <button onClick={stopTimer} style={{flex:1,padding:14,background:"#3b82f6",color:"#fff",border:"none",borderRadius:6,fontFamily:"Orbitron,monospace",fontSize:14,fontWeight:900,cursor:"pointer"}}>⏹ STOP+LOG</button>
+                </>
+              }
+              {!timer.running&&timer.seconds>0&&<button onClick={()=>setTimer({running:false,seconds:0,type:timer.type})} style={{padding:14,background:"transparent",color:"#ef4444",border:"1px solid #ef444455",borderRadius:6,cursor:"pointer",fontSize:16}}>✕</button>}
+            </div>
+            <div style={{...s.card}}>
+              <div style={{...s.label,marginBottom:12}}>TODAY'S LOGGED TIME</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                {[
+                  {label:"Theory",val:todayLog.theory,target:30,color:"#3b82f6"},
+                  {label:"Lab",val:todayLog.lab,target:60,color:"#00ff88"},
+                  {label:"Notes",val:todayLog.notes,target:15,color:"#f59e0b"},
+                ].map(st=>{
+                  const pct=Math.min(100,(st.val/st.target)*100);
+                  return (
+                    <div key={st.label} style={{textAlign:"center"}}>
+                      <div style={{...s.orb(18,pct>=100?st.color:"#4a5568")}}>{st.val}m</div>
+                      <div style={{fontSize:9,color:"#4a5568",margin:"4px 0"}}>{st.label}/{st.target}m</div>
+                      {s.bar(pct,st.color)}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LOGS VIEW */}
+        {view==="logs" && (
+          <div className="fade-in">
+            <div style={{...s.orb(16,"#00ff88"),marginBottom:16}}>DAILY LOGS</div>
+            {Object.keys(state.dailyLogs).length===0
+              ?<div style={{...s.card,textAlign:"center",color:"#2d4a2d",padding:60}}>No logs yet. Check in daily to build your log!</div>
+              :<div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {Object.entries(state.dailyLogs).reverse().map(([date,entry])=>{
+                  const att=state.attendance[date];
+                  return (
+                    <div key={date} style={{...s.card}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
+                        <span style={{...s.orb(13,"#00ff88")}}>{date}</span>
+                        {att&&<div style={{display:"flex",gap:12,fontSize:11,flexWrap:"wrap"}}>
+                          <span style={{color:"#3b82f6"}}>📚{att.theory}m</span>
+                          <span style={{color:"#00ff88"}}>⚡{att.lab}m</span>
+                          <span style={{color:"#f59e0b"}}>✏️{att.notes}m</span>
+                          <span style={{fontSize:18}}>{MOOD[(att.mood||3)-1]}</span>
+                        </div>}
+                      </div>
+                      <div style={{fontSize:12,color:"#a0aec0",lineHeight:1.7,whiteSpace:"pre-wrap",borderTop:"1px solid #1e2a1e",paddingTop:10}}>
+                        {entry||<span style={{color:"#2d4a2d"}}>No notes this day.</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            }
+          </div>
+        )}
+      </div>
+
+      {/* Mobile bottom nav */}
+      {isMobile && (
+        <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d0d17",borderTop:"1px solid #1a2a1a",display:"flex",zIndex:50}}>
+          {navItems.map(n=>(
+            <button key={n.id} onClick={()=>setView(n.id)} style={{flex:1,padding:"10px 4px",background:"transparent",border:"none",color:view===n.id?"#00ff88":"#2d4a2d",fontSize:9,fontFamily:"Orbitron,monospace",letterSpacing:0.5,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+              <span style={{fontSize:16}}>{n.icon}</span>
+              {n.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* CHECK-IN MODAL */}
+      {showCheckin && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:12}}>
+          <div style={{background:"#0d1117",border:"1px solid #00ff88",borderRadius:12,padding:isMobile?20:28,width:"100%",maxWidth:480,maxHeight:"90vh",overflowY:"auto"}}>
+            <div style={{...s.orb(13,"#00ff88"),marginBottom:20}}>💀 BOOSTER KILLER // CHECK-IN // {today}</div>
+
+            <div style={{...s.label,marginBottom:10}}>TIME SPENT (minutes)</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:18}}>
+              {[
+                {key:"theory",label:"📚 Theory",target:30,color:"#3b82f6"},
+                {key:"lab",label:"⚡ Lab",target:60,color:"#00ff88"},
+                {key:"notes",label:"✏️ Notes",target:15,color:"#f59e0b"},
+              ].map(f=>(
+                <div key={f.key}>
+                  <div style={{fontSize:10,color:f.color,marginBottom:6}}>{f.label}<br/><span style={{color:"#4a5568"}}>target:{f.target}m</span></div>
+                  <input type="number" min={0} max={300} value={todayLog[f.key]}
+                    onChange={e=>setTodayLog(prev=>({...prev,[f.key]:parseInt(e.target.value)||0}))}
+                    style={{width:"100%",background:"#0a0a0f",border:`1px solid ${f.color}44`,color:f.color,padding:"10px 8px",borderRadius:4,fontFamily:"Orbitron,monospace",fontSize:18,fontWeight:900,textAlign:"center"}}/>
+                </div>
+              ))}
+            </div>
+
+            <div style={{...s.label,marginBottom:10}}>MOOD / ENERGY</div>
+            <div style={{display:"flex",gap:8,marginBottom:18}}>
+              {MOOD.map((emoji,i)=>(
+                <button key={i} onClick={()=>setTodayLog(prev=>({...prev,mood:i+1}))}
+                  style={{flex:1,fontSize:22,background:todayLog.mood===i+1?"rgba(0,255,136,0.15)":"transparent",border:`1px solid ${todayLog.mood===i+1?"#00ff88":"#1e3a1e"}`,borderRadius:6,padding:"8px 4px",cursor:"pointer"}}>
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            <div style={{...s.label,marginBottom:8}}>WHAT DID YOU LEARN?</div>
+            <textarea rows={4} value={todayLog.entry} onChange={e=>setTodayLog(prev=>({...prev,entry:e.target.value}))}
+              placeholder="Today I learned... practiced... struggled with... tomorrow I'll..."
+              style={{width:"100%",background:"#0a0a0f",border:"1px solid #1e3a1e",color:"#e2e8f0",padding:12,borderRadius:4,fontFamily:"inherit",fontSize:12,resize:"vertical",lineHeight:1.7,marginBottom:16}}/>
+
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={checkin} style={{flex:1,padding:14,background:"#00ff88",color:"#0a0a0f",border:"none",borderRadius:6,fontFamily:"Orbitron,monospace",fontSize:14,fontWeight:900,cursor:"pointer"}}>✓ SAVE</button>
+              <button onClick={()=>setShowCheckin(false)} style={{padding:14,background:"transparent",color:"#4a5568",border:"1px solid #1e3a1e",borderRadius:6,cursor:"pointer",fontSize:14}}>✕</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
